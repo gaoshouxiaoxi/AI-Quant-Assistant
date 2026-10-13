@@ -19,8 +19,26 @@ An AI-powered quantitative analysis platform.
 ## Getting Started
 
 ```bash
+# 1. 创建并激活虚拟环境
+python -m venv venv
+venv\Scripts\activate        # Windows
+
+# 2. 安装依赖
 pip install -r requirements.txt
+
+# 3. 抓取数据（默认 AAPL 2020-2025）
+python src/fetch_data.py
+python src/fetch_data.py TSLA
+python src/fetch_data.py 600519 2020-01-01 2025-01-01   # A 股
 ```
+
+> **注意（Windows）**：本机 `python3` 指向微软商店占位程序，请一律使用 `python`。
+
+### 数据源说明
+
+`src/data_loader.py` 采用**自动降级**策略：优先 `yfinance`，一旦被 Yahoo 限流
+（`YFRateLimitError: Too Many Requests`）就自动切换到腾讯行情接口，调用方无感。
+两个源都失败才会报错，并列出各自的具体原因。
 
 ## Roadmap
 

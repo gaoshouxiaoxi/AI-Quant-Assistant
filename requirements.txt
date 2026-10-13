@@ -4,3 +4,6 @@ pandas
 numpy
 matplotlib
 yfinance
+
+# 备用数据源（A 股 / 接口不稳定时用）
+akshare
