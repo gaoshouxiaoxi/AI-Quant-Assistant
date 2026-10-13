@@ -1,0 +1,23 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# ===== 虚拟环境 =====
+venv/
+.venv/
+env/
+
+# ===== 数据文件（体积大且可重新下载，不入库）=====
+data/*.csv
+data/*.parquet
+
+# ===== 编辑器 / 系统 =====
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+.idea/
+Thumbs.db
+.DS_Store
+*.log

@@ -1,0 +1,6 @@
+# 依赖清单：随着每周进度逐步补充
+# 第 1 周：数据获取
+pandas
+numpy
+matplotlib
+yfinance
