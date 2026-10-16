@@ -100,3 +100,76 @@ def plot_equity_and_drawdown(stock: pd.DataFrame, title: str,
     fig.savefig(out_path, dpi=130)
     plt.close(fig)
     return out_path
+
+
+def plot_signals(df: pd.DataFrame, title: str, out_path: Path,
+                 fast: int = 5, slow: int = 20) -> Path:
+    """画均线策略信号图。
+
+    上图：收盘价 + MA5/MA20，并在金叉/死叉处标注 B / S
+    下图：均线差（快 - 慢），穿过 0 的位置就是交叉点
+    """
+    fig, (ax1, ax2) = plt.subplots(
+        2, 1, figsize=(14, 8), sharex=True,
+        gridspec_kw={"height_ratios": [3, 1]},
+    )
+
+    ax1.plot(df.index, df["Close"], color="#37474f", linewidth=1.0,
+             label="收盘价")
+    ax1.plot(df.index, df[f"MA{fast}"], color="#1565c0", linewidth=1.4,
+             label=f"MA{fast}")
+    ax1.plot(df.index, df[f"MA{slow}"], color="#ef6c00", linewidth=1.4,
+             label=f"MA{slow}")
+
+    buys = df[df["signal"] == 1]
+    sells = df[df["signal"] == -1]
+    ax1.scatter(buys.index, buys["Close"], marker="^", s=70,
+                color="#d32f2f", zorder=5, label=f"金叉买入 ({len(buys)})")
+    ax1.scatter(sells.index, sells["Close"], marker="v", s=70,
+                color="#2e7d32", zorder=5, label=f"死叉卖出 ({len(sells)})")
+
+    ax1.set_title(title)
+    ax1.set_ylabel("价格")
+    ax1.legend(loc="upper left", fontsize=9)
+    ax1.grid(alpha=0.25)
+
+    ax2.plot(df.index, df["signal_diff"], color="#6a1b9a", linewidth=1.0)
+    ax2.axhline(0, color="gray", linewidth=0.9, linestyle="--")
+    ax2.fill_between(df.index, df["signal_diff"], 0,
+                     where=(df["signal_diff"] > 0),
+                     color="#d32f2f", alpha=0.18, interpolate=True)
+    ax2.fill_between(df.index, df["signal_diff"], 0,
+                     where=(df["signal_diff"] < 0),
+                     color="#2e7d32", alpha=0.18, interpolate=True)
+    ax2.set_ylabel(f"MA{fast} - MA{slow}")
+    ax2.grid(alpha=0.25)
+
+    fig.autofmt_xdate()
+    fig.tight_layout()
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=130)
+    plt.close(fig)
+    return out_path
+
+
+def plot_strategy_equity(df: pd.DataFrame, title: str, out_path: Path) -> Path:
+    """策略净值 vs 买入持有净值。"""
+    fig, ax = plt.subplots(figsize=(14, 5))
+    ax.plot(df.index, df["equity_hold"], color="#455a64", linewidth=1.4,
+            label="买入持有")
+    ax.plot(df.index, df["equity_ma"], color="#d32f2f", linewidth=1.4,
+            label="MA5/MA20 策略")
+    ax.axhline(1.0, color="gray", linewidth=0.8, linestyle="--")
+    ax.set_title(title)
+    ax.set_ylabel("净值（起点=1）")
+    ax.legend()
+    ax.grid(alpha=0.25)
+
+    fig.autofmt_xdate()
+    fig.tight_layout()
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=130)
+    plt.close(fig)
+    return out_path
