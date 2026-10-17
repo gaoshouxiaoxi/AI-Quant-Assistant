@@ -24,3 +24,6 @@ data/*.parquet
 Thumbs.db
 .DS_Store
 *.log
+
+# ===== Streamlit =====
+.streamlit/

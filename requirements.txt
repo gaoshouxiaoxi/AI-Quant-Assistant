@@ -15,3 +15,7 @@ backtrader
 # 第 5-6 周：机器学习
 scikit-learn
 xgboost
+
+# 第 7 周：网页界面
+streamlit
+

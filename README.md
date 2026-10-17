@@ -35,9 +35,38 @@ python src/fetch_data.py 600519 2020-01-01 2025-01-01   # A 股
 python src/analyze.py                       # 默认 AAPL 与 600519
 python src/analyze.py AAPL                  # 只分析一个
 python src/analyze.py AAPL,600519 2022-06-15 2024-12-31
+
+# 5. 启动网页界面（推荐先试这个）
+streamlit run app.py
 ```
 
 > **注意（Windows）**：本机 `python3` 指向微软商店占位程序，请一律使用 `python`。
+
+## 网页界面（第 7 周）
+
+```bash
+streamlit run app.py
+```
+
+浏览器打开 `http://127.0.0.1:8501`，左侧选标的、日期区间与回测参数，右侧四个标签页：
+
+| 标签页 | 内容 |
+| --- | --- |
+| **概览** | 区间收益 / 年化收益 / 年化波动 / 夏普 / 最大回撤 + K 线与金叉死叉信号 |
+| **均线策略** | 最终资产、策略 vs 买入持有、超额、笔数、胜率、平均持仓天数、净值与回撤曲线 |
+| **波动率预测** | 当前 20 日 Yang-Zhang 波动、未来 5 日 HAR 预测（含变化方向）、样本外 R² |
+| **说明与局限** | 能预测什么、不能预测什么，方法论要点与免责声明 |
+
+几点实现细节：
+
+- 数据优先读本地缓存（`load_daily(..., cache_dir=...)`），避免每次刷新都打网络接口
+- Streamlit 的 `@st.cache_data` 缓存行情与预测，切换标签页不会重复计算
+- 使用 `width="stretch"` 而非已弃用的 `use_container_width`
+- 中文字体沿用 `setup_chinese_font()`，图表不会出现方框
+
+**验证方式**：用 Streamlit 官方测试框架 `AppTest` 无头运行整个界面，
+确认 **0 异常**，并核对渲染出的指标数值与命令行结果一致（例如 600519
+的区间收益 -12.57%、策略收益 -34.03%、买入持有 -12.57%）。
 
 ## 示例结果
 
@@ -529,6 +558,7 @@ for _stream in (sys.stdout, sys.stderr):
 
 ```
 AI-Quant-Assistant/
+├── app.py                # 第 7 周：Streamlit 网页界面
 ├── charts/              # 生成的图表（入库，供 README 引用）
 ├── data/                # 抓取的 CSV（不入库，可重新生成）
 ├── notebooks/
@@ -568,7 +598,7 @@ AI-Quant-Assistant/
 | 第 3 周 | 技术指标（MA5 / MA20 均线策略） | ✅ 完成 |
 | 第 4 周 | 回测系统（手写引擎 + Backtrader 交叉验证） | ✅ 完成 |
 | 第 5-6 周 | 机器学习预测（RandomForest / XGBoost） | ✅ 完成 |
-| 第 7 周 | 网页界面（Streamlit） | ⬜ 未开始 |
+| 第 7 周 | 网页界面（Streamlit） | ✅ 完成 |
 | 第 8 周 | 开源包装（文档 + Demo） | ⬜ 未开始 |
 
 ## License
