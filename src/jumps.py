@@ -343,9 +343,11 @@ def main() -> None:
                 n_estimators=300, max_depth=4, min_samples_leaf=20,
                 random_state=42, n_jobs=-1),
         }
-        # 基线只用"当前波动水平"一个特征
-        base_df = pd.DataFrame({"target": feat["target"],
-                                "f_log_rv5": feat["f_log_rv5"]})
+        # 基线只用"当前波动水平"一个特征。
+        # 关键：必须让基线与模型使用**完全相同的样本行**，否则缺失值处理
+        # 会让两者的 n 不同（实测曾出现基线 n=91、模型 n=162），对比就不公平。
+        feat_valid = feat.dropna(subset=["target"] + feature_columns(feat))
+        base_df = feat_valid[["target", "f_log_rv5"]].copy()
         base = evaluate(base_df, lambda: LogisticRegression(max_iter=1000),
                         "基线:仅波动水平")
         if base.get("n"):
