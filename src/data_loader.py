@@ -118,8 +118,15 @@ def load_daily(ticker: str, start: str, end: str,
                 errors.append(f"{name}: {type(exc).__name__}: {exc}")
 
     if cache_file is not None and cache_file.exists():
-        cached = _normalize(pd.read_csv(cache_file, index_col=0, parse_dates=True))
-        return cached, "cache(降级)"
+        # 降级读缓存也必须体检：缓存文件可能是早期未加体检时写下的脏数据
+        # （例如 AAPL 2020-08-31 的拆股断层），直接返回会把错误带进下游。
+        try:
+            cached = _normalize(pd.read_csv(cache_file, index_col=0,
+                                            parse_dates=True))
+            _validate(cached, "cache(降级)")
+            return cached, "cache(降级)"
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"cache(降级): {type(exc).__name__}: {exc}")
 
     raise RuntimeError("所有数据源都失败或未通过体检：\n  - " + "\n  - ".join(errors))
 

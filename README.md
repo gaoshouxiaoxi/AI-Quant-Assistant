@@ -220,6 +220,48 @@ python src/ml_predict.py AAPL,600519
 汇总明细：`reports/volatility_results.csv`、`reports/multi_ticker_*.csv`、
 `reports/horizon_threshold_experiment.csv`
 
+### v2：换掉有偏的波动率估计量（大幅提升）
+
+v1 的基线用「收盘价法的日收益率标准差」。为了验证它准不准，我用
+**15 分钟高频数据算出的已实现波动率（RV）当真值**做了对照
+（`src/rv_validation.py`，122 个交易日）：
+
+| 估计量 | 对比目标 | 相关系数 | 回归斜率 | 中位比值 |
+| --- | --- | --- | --- | --- |
+| **Parkinson** | 日内 RV | **0.954** | **0.99** | 0.94 |
+| Garman-Klass | 日内 RV | 0.930 | 0.98 | 0.93 |
+| Rogers-Satchell | 日内 RV | 0.819 | 0.80 | 0.90 |
+| **Yang-Zhang** | 总 RV | **0.837** | **1.05** | 0.96 |
+| 收盘价法 | 总 RV | 0.767 | **0.52** | 0.86 |
+
+**关键发现：收盘价法的回归斜率只有 0.52** —— 它系统性低估真实波动，是有偏估计。
+而 v1 的"持续性基线"正是用它，所以基线本身就不准，这解释了 v1 里 R² 普遍为负。
+
+换成 **Yang-Zhang**（利用开高低收四个价格、正确处理隔夜跳空，斜率 1.05 接近无偏）
+作为目标后重跑（`src/volatility_v2.py`）：
+
+| 版本 | 模型平均 R² | 基线平均 R² | 平均 Skill | AUC |
+| --- | --- | --- | --- | --- |
+| v1（收盘价法） | **-0.245** | -0.046 | — | 0.641 |
+| **v2（Yang-Zhang）** | **0.767** | 0.729 | **+16.15%** | **0.930** |
+
+| 标的 | 模型（RandomForest） | R² | 基线 R² | Skill | AUC |
+| --- | --- | --- | --- | --- | --- |
+| 贵州茅台 | Yang-Zhang 目标 | 0.860 | 0.786 | **+34.6%** | 0.956 |
+| 五粮液 | Yang-Zhang 目标 | 0.820 | 0.757 | **+25.8%** | 0.949 |
+| 平安银行 | Yang-Zhang 目标 | 0.830 | 0.779 | **+23.1%** | 0.942 |
+| Apple | Yang-Zhang 目标 | 0.672 | 0.593 | **+19.5%** | 0.898 |
+
+**结论：降低目标的估计噪声，比换更复杂的模型有效得多。**
+R² 从 -0.245 升到 0.767，而且模型首次稳定超过持续性基线
+（Skill 平均 +16.15%，即预测误差比"直接用当前波动"低 16%）。
+
+| 波动率预测 v1 | 波动率预测 v2 |
+| --- | --- |
+| ![v1](charts/vol_600519.png) | ![v2](charts/vol_v2_600519.png) |
+
+汇总明细：`reports/rv_estimator_validation.csv`、`reports/volatility_v2_yang_zhang.csv`
+
 ## 日内效应（15 分钟数据）
 
 ```bash
@@ -373,7 +415,10 @@ AI-Quant-Assistant/
 │   ├── experiment.py    # 周期与阈值扫描实验
 │   ├── robustness.py    # 稳健性检验（分折/随机标签/跨区间）
 │   ├── validate_multi.py # 多标的验证（揭穿数据挖掘偏差）
-│   ├── volatility.py    # 波动率预测（对数变化量 + 持续性基线）
+│   ├── volatility.py    # 波动率预测 v1（收盘价法目标）
+│   ├── rv_estimators.py # 波动率估计量（Parkinson/GK/RS/Yang-Zhang）
+│   ├── rv_validation.py # 用 15 分钟 RV 验证估计量精度
+│   ├── volatility_v2.py # 波动率预测 v2（Yang-Zhang 目标）
 │   └── analyze.py       # 分析主程序
 ├── README.md
 └── requirements.txt
