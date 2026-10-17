@@ -107,6 +107,50 @@ python src/analyze.py AAPL,600519 2022-06-15 2024-12-31
 | ![AAPL K线](charts/AAPL_kline.png) | ![AAPL 净值回撤](charts/AAPL_equity.png) | ![AAPL 信号](charts/AAPL_signals.png) | ![AAPL 策略净值](charts/AAPL_strategy_equity.png) |
 | ![600519 K线](charts/600519_kline.png) | ![600519 净值回撤](charts/600519_equity.png) | ![600519 信号](charts/600519_signals.png) | ![600519 策略净值](charts/600519_strategy_equity.png) |
 
+## 第 5-6 周：机器学习预测
+
+任务：用**过去 20 个交易日**的 OHLCV + 技术指标，预测**次日收盘价是否上涨**。
+共 34 个特征，分三类：滞后收益（20 个）、技术指标（均线偏离/波动率/RSI/量比/动量）、
+K 线形态（实体、上下影线、跳空）。
+
+```bash
+python src/ml_predict.py AAPL,600519
+```
+
+### 方法上刻意避开的三件事
+
+1. **不做随机切分**：金融时序随机打乱会让未来样本进入训练集，指标会虚高到 70%+。
+   这里用**扩展窗口前向验证**（5 折，训练集永远是测试集的过去）。
+2. **标准化放在每折内部**：先全量标准化再切分会把测试集均值/方差泄漏进训练。
+3. **必须对照基线**：上涨天数天然多于下跌，"恒预测多数派"就是免费基线。
+
+### 结果（样本外，2022-06-15 ~ 2024-12-31）
+
+| 标的 | 模型 | 准确率 | AUC | 精确率 | 召回率 | F1 | 超基线 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| AAPL | RandomForest | 50.67% | 0.467 | 55.19% | 63.94% | 0.592 | -5.39% |
+| AAPL | XGBoost | 46.63% | 0.466 | 52.58% | 49.04% | 0.507 | -9.43% |
+| 600519 | RandomForest | 58.33% | 0.522 | 58.62% | 21.25% | 0.312 | +2.78% |
+| 600519 | XGBoost | 51.94% | 0.513 | 45.52% | 41.25% | 0.433 | -3.61% |
+
+**结论：这批特征在这段区间上没有可用的预测能力。**
+
+- AAPL 的 AUC 是 **0.467**，低于 0.5——比随机猜还差。
+- 600519 的 RF 准确率 58.33% 看似超过基线 55.56%，但 **AUC 只有 0.522**，
+  且召回率仅 21.25%——它几乎只在最有把握时才预测"涨"，靠的是少猜取胜，
+  不是真预测能力。这种"高准确率 + 低召回"是最容易被误读的陷阱。
+- 特征重要性 Top 全是滞后收益（`f_ret_lag15/17/9/7`），说明模型在拟合噪声。
+
+这个负面结果本身是有价值的：**日频量价特征预测次日方向，接近有效市场假说**。
+真正的信号通常来自更低频、更多外部信息（基本面、舆情、资金流）或更长预测周期。
+
+| AAPL 预测概率 | AAPL 特征重要性 |
+| --- | --- |
+| ![AAPL RF 概率](charts/AAPL_RandomForest_proba.png) | ![AAPL 特征重要性](charts/AAPL_feature_importance.png) |
+| ![600519 RF 概率](charts/600519_RandomForest_proba.png) | ![600519 特征重要性](charts/600519_feature_importance.png) |
+
+汇总明细：`reports/ml_results.csv`
+
 ## 踩过的坑
 
 ### 1. 未复权数据会造成假暴跌（已在代码中拦截）
@@ -200,6 +244,7 @@ AI-Quant-Assistant/
 ├── charts/              # 生成的图表（入库，供 README 引用）
 ├── data/                # 抓取的 CSV（不入库，可重新生成）
 ├── notebooks/
+├── reports/          # 实验明细 CSV（入库，便于对比不同版本）
 ├── src/
 │   ├── data_loader.py   # 多源降级 + 复权体检
 │   ├── fetch_data.py    # 第 1 周：数据获取
@@ -208,6 +253,10 @@ AI-Quant-Assistant/
 │   ├── strategy.py      # 第 3 周：MA5/MA20 金叉死叉信号
 │   ├── backtest.py      # 第 4 周：回测引擎（手续费/滑点/整股/基准）
 │   ├── backtrader_check.py  # 第 4 周：Backtrader 交叉验证
+│   ├── features.py      # 第 5-6 周：特征工程（20 日窗口 + 技术指标）
+│   ├── ml_model.py      # 第 5-6 周：前向验证与指标评估
+│   ├── ml_predict.py    # 第 5-6 周：ML 预测主程序
+│   ├── ml_charts.py     # 第 5-6 周：特征重要性 / 预测概率图
 │   └── analyze.py       # 分析主程序
 ├── README.md
 └── requirements.txt
@@ -221,7 +270,7 @@ AI-Quant-Assistant/
 | 第 2 周 | 数据分析（K线、收益率、波动率） | ✅ 完成 |
 | 第 3 周 | 技术指标（MA5 / MA20 均线策略） | ✅ 完成 |
 | 第 4 周 | 回测系统（手写引擎 + Backtrader 交叉验证） | ✅ 完成 |
-| 第 5-6 周 | 机器学习预测（RandomForest → XGBoost） | ⬜ 未开始 |
+| 第 5-6 周 | 机器学习预测（RandomForest / XGBoost） | ✅ 完成 |
 | 第 7 周 | 网页界面（Streamlit） | ⬜ 未开始 |
 | 第 8 周 | 开源包装（文档 + Demo） | ⬜ 未开始 |
 

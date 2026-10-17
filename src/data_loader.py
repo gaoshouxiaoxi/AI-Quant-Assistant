@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import json
 import os
+import time
 import urllib.request
+from pathlib import Path
 
 import pandas as pd
 import yfinance as yf
@@ -60,28 +62,64 @@ def _validate(df: pd.DataFrame, name: str) -> None:
         )
 
 
-def load_daily(ticker: str, start: str, end: str) -> tuple[pd.DataFrame, str]:
+def _cache_path(cache_dir: Path | None, ticker: str, start: str, end: str) -> Path | None:
+    if cache_dir is None:
+        return None
+    return Path(cache_dir) / f"{ticker}_{start}_{end}.csv"
+
+
+def load_daily(ticker: str, start: str, end: str,
+               cache_dir: Path | str | None = None,
+               retries: int = 2) -> tuple[pd.DataFrame, str]:
     """获取日线数据，返回 (DataFrame, 数据源名称)。
 
-    尝试顺序：yfinance（支持复权、覆盖全）→ 腾讯（前复权、较稳，但单次 640 行）
-    → akshare。每个源取到数据后都要通过 `_validate` 体检，否则视为不可用并降级。
+    顺序：
+    1. 若给了 `cache_dir` 且已有对应 CSV，直接读本地缓存（source="cache"）。
+       免费数据源经常限流/断连，缓存能保证重复实验不被网络卡住。
+    2. 依次尝试 yfinance（支持复权、覆盖全）→ 腾讯（前复权、较稳，单次 640 行）
+       → akshare。每个源取到数据后都要通过 `_validate` 体检，否则降级。
+    3. 网络全失败但有缓存时，回退到缓存（source="cache(降级)"）。
 
-    所有源都失败时抛 RuntimeError，并带上每个源的具体原因。
+    所有路径都失败时抛 RuntimeError，并列出每个源的具体原因。
     """
-    errors: list[str] = []
-
-    for name, loader in (("yfinance", _from_yfinance),
-                         ("tencent", _from_tencent),
-                         ("akshare", _from_akshare)):
+    cache_file = _cache_path(cache_dir if isinstance(cache_dir, Path) else
+                             (Path(cache_dir) if cache_dir else None),
+                             ticker, start, end)
+    if cache_file is not None and cache_file.exists():
         try:
-            df = loader(ticker, start, end)
-            if df.empty:
-                errors.append(f"{name}: 返回空数据")
-                continue
-            _validate(df, name)
-            return df, name
-        except Exception as exc:  # noqa: BLE001 - 需要把真实原因带给调用者
-            errors.append(f"{name}: {type(exc).__name__}: {exc}")
+            cached = pd.read_csv(cache_file, index_col=0, parse_dates=True)
+            cached = _normalize(cached)
+            _validate(cached, "cache")
+            return cached, "cache"
+        except Exception:  # noqa: BLE001 - 缓存坏了就继续走网络
+            pass
+
+    errors: list[str] = []
+    sources = (("yfinance", _from_yfinance),
+               ("tencent", _from_tencent),
+               ("akshare", _from_akshare))
+
+    for name, loader in sources:
+        for attempt in range(retries + 1):
+            try:
+                df = loader(ticker, start, end)
+                if df.empty:
+                    if attempt < retries:
+                        time.sleep(0.8 * (attempt + 1))
+                        continue
+                    errors.append(f"{name}: 返回空数据")
+                    break
+                _validate(df, name)
+                return df, name
+            except Exception as exc:  # noqa: BLE001
+                if attempt < retries:
+                    time.sleep(0.8 * (attempt + 1))
+                    continue
+                errors.append(f"{name}: {type(exc).__name__}: {exc}")
+
+    if cache_file is not None and cache_file.exists():
+        cached = _normalize(pd.read_csv(cache_file, index_col=0, parse_dates=True))
+        return cached, "cache(降级)"
 
     raise RuntimeError("所有数据源都失败或未通过体检：\n  - " + "\n  - ".join(errors))
 

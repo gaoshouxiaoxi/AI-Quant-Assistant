@@ -1,5 +1,6 @@
 # 依赖清单：随着每周进度逐步补充
-# 第 1 周：数据获取
+
+# 第 1 周：数据获取与基础分析
 pandas
 numpy
 matplotlib
@@ -7,3 +8,10 @@ yfinance
 
 # 备用数据源（A 股 / 接口不稳定时用）
 akshare
+
+# 第 4 周：回测与交叉验证
+backtrader
+
+# 第 5-6 周：机器学习
+scikit-learn
+xgboost
