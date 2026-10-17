@@ -1,0 +1,4 @@
+# 开发依赖（测试与本地检查）
+-r requirements.txt
+
+pytest

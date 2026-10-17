@@ -1,22 +1,42 @@
 # AI Quant Assistant
 
+[![CI](https://github.com/gaoshouxiaoxi/AI-Quant-Assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/gaoshouxiaoxi/AI-Quant-Assistant/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-35%20passed-brightgreen)](tests/)
+
 An AI-powered quantitative analysis platform.
+
+**这个项目的重点不是"预测得准"，而是"结论经得起检验"。**
+每条结论都配了基线对照、前向验证与置信区间；测不出效果的部分会如实写成负面结论。
 
 ## Features
 
-- Stock data collection
-- Technical analysis
-- Backtesting
-- Machine learning prediction
+- 股票数据获取（多源自动降级 + 复权体检）
+- 技术分析与 K 线可视化
+- 双均线策略回测（手续费、滑点、整股成交、基准对比）
+- 波动率预测（Yang-Zhang / HAR，样本外 Skill +28.5%）
+- Streamlit 网页界面
+- 35 个单元测试 + GitHub Actions CI
+
+## 目录
+
+- [快速开始](#快速开始)
+- [网页界面](#网页界面第-7-周)
+- [示例结果](#示例结果)
+- [核心发现：能预测什么、不能预测什么](#核心发现能预测什么不能预测什么)
+- [测试](#测试)
+- [项目结构](#项目结构)
+- [贡献](#贡献)
+- [License](#license)
 
 ## Tech Stack
 
-- Python
-- Pandas
-- Machine Learning
+- Python（pandas / numpy / scikit-learn / xgboost / matplotlib）
 - Streamlit
+- pytest + GitHub Actions
 
-## Getting Started
+## 快速开始
 
 ```bash
 # 1. 创建并激活虚拟环境
@@ -558,36 +578,104 @@ for _stream in (sys.stdout, sys.stderr):
 
 ```
 AI-Quant-Assistant/
-├── app.py                # 第 7 周：Streamlit 网页界面
-├── charts/              # 生成的图表（入库，供 README 引用）
-├── data/                # 抓取的 CSV（不入库，可重新生成）
+├── app.py                # Streamlit 网页界面
+├── charts/               # 图表（入库，供 README 引用）
+├── data/                 # 日线 CSV（不入库，可重新生成）
+│   └── minute/           # 分钟线（入库，体量小且用于复现）
 ├── notebooks/
-├── reports/          # 实验明细 CSV（入库，便于对比不同版本）
+├── reports/              # 实验明细 CSV（入库，便于对比不同版本）
+├── tests/                # 单元测试（不需要联网）
+│   ├── conftest.py
+│   ├── test_metrics.py
+│   ├── test_rv_estimators.py
+│   ├── test_strategy.py
+│   └── test_backtest.py
+├── .github/workflows/ci.yml
 ├── src/
-│   ├── data_loader.py   # 多源降级 + 复权体检
-│   ├── fetch_data.py    # 第 1 周：数据获取
-│   ├── metrics.py       # 收益率 / 波动率 / 夏普 / 最大回撤
-│   ├── charts.py        # K 线图、净值与回撤图、策略信号图
-│   ├── strategy.py      # 第 3 周：MA5/MA20 金叉死叉信号
-│   ├── backtest.py      # 第 4 周：回测引擎（手续费/滑点/整股/基准）
-│   ├── backtrader_check.py  # 第 4 周：Backtrader 交叉验证
-│   ├── features.py      # 第 5-6 周：特征工程（20 日窗口 + 技术指标）
-│   ├── ml_model.py      # 第 5-6 周：前向验证与指标评估
-│   ├── ml_predict.py    # 第 5-6 周：ML 预测主程序
-│   ├── ml_charts.py     # 第 5-6 周：特征重要性 / 预测概率图
-│   ├── experiment.py    # 周期与阈值扫描实验
-│   ├── robustness.py    # 稳健性检验（分折/随机标签/跨区间）
+│   ├── data_loader.py    # 多源降级 + 复权体检
+│   ├── fetch_data.py     # 数据获取
+│   ├── metrics.py        # 收益率 / 波动率 / 夏普 / 最大回撤
+│   ├── charts.py         # K 线图、净值与回撤图、策略信号图
+│   ├── strategy.py       # MA5/MA20 金叉死叉信号
+│   ├── backtest.py       # 回测引擎（手续费/滑点/整股/基准）
+│   ├── backtrader_check.py   # Backtrader 交叉验证
+│   ├── features.py       # 特征工程（20 日窗口 + 技术指标）
+│   ├── ml_model.py       # 前向验证与指标评估
+│   ├── ml_predict.py     # ML 预测主程序
+│   ├── ml_charts.py      # 特征重要性 / 预测概率图
+│   ├── experiment.py     # 周期与阈值扫描实验
+│   ├── robustness.py     # 稳健性检验（分折/随机标签/跨区间）
 │   ├── validate_multi.py # 多标的验证（揭穿数据挖掘偏差）
-│   ├── volatility.py    # 波动率预测 v1（收盘价法目标）
-│   ├── rv_estimators.py # 波动率估计量（Parkinson/GK/RS/Yang-Zhang）
-│   ├── rv_validation.py # 用 15 分钟 RV 验证估计量精度
-│   ├── volatility_v2.py # 波动率预测 v2（Yang-Zhang 目标）
-│   ├── daily_rv.py      # 60 分钟日度 RV + HAR 模型
-│   ├── jumps.py         # 跳跃建模（BV 与 MAD 检测 + 尖峰预测）
-│   └── analyze.py       # 分析主程序
+│   ├── volatility.py     # 波动率预测 v1（收盘价法目标）
+│   ├── rv_estimators.py  # 波动率估计量（Parkinson/GK/RS/Yang-Zhang）
+│   ├── rv_validation.py  # 用 15 分钟 RV 验证估计量精度
+│   ├── volatility_v2.py  # 波动率预测 v2（Yang-Zhang 目标）
+│   ├── daily_rv.py       # 60 分钟日度 RV + HAR 模型
+│   ├── jumps.py          # 跳跃建模（BV 与 MAD 检测 + 尖峰预测）
+│   ├── intraday.py       # 日内效应（15 分钟数据）
+│   └── analyze.py        # 分析主程序
+├── CONTRIBUTING.md
+├── LICENSE
 ├── README.md
-└── requirements.txt
+├── requirements.txt
+└── requirements-dev.txt
 ```
+
+## 核心发现：能预测什么、不能预测什么
+
+| 目标 | 指标 | 结论 |
+| --- | --- | --- |
+| 次日涨跌方向 | AUC **0.50** | ❌ 与随机猜无异，已证伪 |
+| 波动率水平 | R² **0.767**，Skill **+16%** | ✅ 可预测 |
+| 高波动 regime | AUC **0.93** | ✅ 高度可预测 |
+| 波动尖峰（跳跃） | AUC **0.506**，95% CI 覆盖 0.5 | ❌ 不可提前识别 |
+
+**一句话：能估"风险有多大"，不能估"什么时候涨跌、什么时候出事"。**
+
+这个结论不是拍脑袋，而是三次迭代逼出来的（详见下方各节）：
+
+1. 方向预测在 2.5 年数据上曾做到 AUC 0.697，扩到 5 年 + 3 只股票后掉到 **0.502**
+   —— 典型的数据挖掘偏差。
+2. 波动率预测从 R² **-0.245** 提升到 **0.767**，靠的是把有偏的收盘价法换成
+   Yang-Zhang 估计量（用 15 分钟高频 RV 验证过斜率 1.05）。
+3. 尖峰预测无论怎么调特征，AUC 都在 0.5 附近，且 95% 置信区间全部覆盖 0.5。
+
+## 测试
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest tests -v
+```
+
+**35 个测试，全部不需要联网**，覆盖四类核心逻辑：
+
+| 测试文件 | 覆盖内容 |
+| --- | --- |
+| `test_metrics.py` | 年化收益/波动/夏普/最大回撤的**解析解**验证 |
+| `test_rv_estimators.py` | Parkinson / Garman-Klass / Rogers-Satchell 的公式逐项核对 |
+| `test_strategy.py` | 金叉死叉识别、**持仓次日生效**、**无前瞻偏差**、`ffill` 持仓延续 |
+| `test_backtest.py` | 手续费与滑点方向、**改未来价格不影响过去成交**、整股成交、基准一致性 |
+
+其中几个测试是**直接为历史 bug 写的回归测试**：
+
+- `test_position_extends_beyond_signal_day`：守住 `ffill` 把"无信号日"写成 0 的坑
+  （该 bug 曾让策略净值从 1.4351 掉到 1.0176）
+- `test_no_lookahead`：修改最后 40 天价格，断言之前的成交价完全不变
+- `test_sharpe_undefined_when_vol_zero`：波动率是浮点极小数时应返回 NaN 而非巨大值
+
+CI（`.github/workflows/ci.yml`）在 Python 3.11 / 3.12 上跑测试 + 全模块语法检查，
+只安装 `pandas numpy pytest`，不拉 yfinance / xgboost / streamlit，构建快且稳定。
+
+## 贡献
+
+见 [CONTRIBUTING.md](CONTRIBUTING.md)。几条硬约定：
+
+- 时间序列**一律用扩展窗口前向验证**，禁止随机切分
+- 标准化放在交叉验证内部，不能先全量标准化
+- 每个结论必须配基线（持续性 / 多数派 / 随机）
+- 稀疏事件必须给 bootstrap 置信区间
+- 新增数据源必须通过 `data_loader._validate()` 的复权体检
+
 
 ## Roadmap
 
@@ -599,8 +687,10 @@ AI-Quant-Assistant/
 | 第 4 周 | 回测系统（手写引擎 + Backtrader 交叉验证） | ✅ 完成 |
 | 第 5-6 周 | 机器学习预测（RandomForest / XGBoost） | ✅ 完成 |
 | 第 7 周 | 网页界面（Streamlit） | ✅ 完成 |
-| 第 8 周 | 开源包装（文档 + Demo） | ⬜ 未开始 |
+| 第 8 周 | 开源包装（LICENSE / 测试 / CI / 文档） | ✅ 完成 |
 
 ## License
 
-MIT
+[MIT](LICENSE) © 2026 gaoshouxiaoxi
+
+> 本项目仅用于研究与教学，不构成任何投资建议。

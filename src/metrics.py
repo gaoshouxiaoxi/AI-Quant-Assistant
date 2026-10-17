@@ -48,9 +48,14 @@ def annualized_volatility(close: pd.Series) -> float:
 
 
 def sharpe_ratio(close: pd.Series, risk_free: float = 0.0) -> float:
-    """夏普比率（默认无风险利率为 0）。"""
+    """夏普比率（默认无风险利率为 0）。
+
+    波动率必须用容差判断是否为零：像"每日固定 +1%"这种序列，
+    浮点运算会得到 1e-18 量级的非零标准差，若只判断 `vol == 0`，
+    夏普会返回一个巨大的有限值而不是"无定义"。
+    """
     vol = annualized_volatility(close)
-    if not np.isfinite(vol) or vol == 0:
+    if not np.isfinite(vol) or abs(vol) < 1e-12:
         return float("nan")
     return float((annualized_return(close) - risk_free) / vol)
 
