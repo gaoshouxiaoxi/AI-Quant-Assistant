@@ -190,13 +190,16 @@ def build_har_dataset(daily: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-def walk_forward(n: int, n_splits: int = N_SPLITS, min_train: float = 0.4):
-    start = int(n * min_train)
-    step = max(1, (n - start) // n_splits)
-    for k in range(n_splits):
-        b = start + k * step
-        end = n if k == n_splits - 1 else b + step
-        yield np.arange(0, b), np.arange(b, end)
+def walk_forward(n: int, n_splits: int = N_SPLITS, min_train: float = 0.4,
+                 purge: int = FORWARD):
+    """扩展窗口切分，训练集末尾剔除 purge 行。
+
+    [审计修复] 标签是"未来 FORWARD 日均值 RV"，训练集最后 FORWARD 行的标签
+    窗口会伸进测试区间，必须 purge，否则样本外验证不独立。
+    """
+    from validation import walk_forward_indices
+
+    yield from walk_forward_indices(n, n_splits, min_train, purge)
 
 
 def evaluate_har(data: pd.DataFrame) -> dict:
@@ -232,19 +235,31 @@ def evaluate_har(data: pd.DataFrame) -> dict:
 
 
 def plot_har(result: dict, title: str, out_path: Path) -> Path:
-    """HAR 预测 vs 持续性基线 vs 实际（对数 RV）。"""
+    """HAR 预测 vs 持续性基线 vs 实际（对数 RV）。
+
+    [审计修复] RV 是**日度方差**（Σr² + 隔夜²），不是波动率。
+    年化波动率必须写 sqrt(252 × RV)；原实现写的是 252 × RV（年化方差），
+    纵轴却标成"年化波动率"，属于量纲错误。
+
+    注意偏差方向与倍数：波动率通常小于 1，所以方差在数值上更小——
+    图表会**系统性低估**，且倍数随水平变化（例如年化波动 31.75% 时，
+    方差显示为 10.08%），不是固定的 15.87 倍。
+    """
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from charts import setup_chinese_font
     setup_chinese_font()
 
+    def to_vol(logrv):
+        return np.sqrt(np.exp(logrv) * TRADING_DAYS)
+
     fig, ax = plt.subplots(figsize=(14, 5.5))
-    ax.plot(result["true"].index, np.exp(result["true"]).values * TRADING_DAYS,
-            color="#212121", linewidth=1.1, label="实际 RV（年化）")
-    ax.plot(result["pred"].index, np.exp(result["pred"]).values * TRADING_DAYS,
+    ax.plot(result["true"].index, to_vol(result["true"]),
+            color="#212121", linewidth=1.1, label="实际年化波动率")
+    ax.plot(result["pred"].index, to_vol(result["pred"]),
             color="#d32f2f", linewidth=1.1, alpha=0.85, label="HAR 预测")
-    ax.plot(result["base"].index, np.exp(result["base"]).values * TRADING_DAYS,
+    ax.plot(result["base"].index, to_vol(result["base"]),
             color="#1565c0", linewidth=1.0, linestyle="--", alpha=0.75,
             label="持续性基线")
     ax.set_ylabel("年化波动率")
