@@ -1,0 +1,7 @@
+﻿{
+    "recorded_at_utc":  "2026-10-18T11:01:46Z",
+    "baseline_commit":  "710f614527d7cee533f67fceaf675768599cac15",
+    "config_sha256":  "f65e372a7c2d31601f788a8f9148c95f8003767f1e9eba457e48f32bdba7b8a8",
+    "preregistration_sha256":  "1653bd9d274d73a675af084765717d90649facac0b481cc3e6d154adff049925",
+    "note":  "此记录在抓取任何新股票行情数据之前生成；后续分析不得修改上述两个文件"
+}

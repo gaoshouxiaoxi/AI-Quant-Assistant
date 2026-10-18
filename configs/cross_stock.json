@@ -1,0 +1,118 @@
+{
+  "protocol_version": "1.0.0",
+  "description": "跨股票验证：在 25 只沪深300 成分股上检验 HAR-3 相对持续性基线的误差优势是否重现",
+  "preregistration": "docs/preregistration_cross_stock.md",
+  "baseline_commit": "710f614",
+  "seed": 42,
+
+  "universe_rule": {
+    "pool": "CSI300 constituents snapshot",
+    "pool_source": "akshare index_stock_cons_csindex('000300')",
+    "snapshot_date": "2026-10-16",
+    "pool_size": 300,
+    "exchange_filter": ["上海证券交易所", "深圳证券交易所"],
+    "ordering": "ascending stock code (string sort)",
+    "target_n": 25,
+    "completeness": {
+      "min_bars": 1900,
+      "first_bar_not_after": "2024-10-10",
+      "last_bar_not_before": "2026-10-09",
+      "median_bars_per_day": 4
+    },
+    "replacement_rule": "顺延下一个代码，不跳号、不按表现挑选",
+    "exclusion_log": "reports/cross_stock/universe_exclusions.csv"
+  },
+
+  "data": {
+    "source": "sina_60m_bars",
+    "endpoint": "quotes.sina.cn CN_MarketDataService.getKLineData",
+    "scale_minutes": 60,
+    "datalen": 1970,
+    "adjustment": "none (新浪分钟线不复权)",
+    "trading_days_per_year": 252,
+    "rv_definition": "sum(r_i^2) + overnight^2, 日度方差，未年化",
+    "missing_days": "跳过，不补",
+    "network_required_for_fetch": true,
+    "network_required_for_analysis": false
+  },
+
+  "target": {
+    "name": "future_mean_rv",
+    "horizon_days": 5,
+    "space": "log",
+    "formula": "log(mean(RV[t+1 : t+5]))"
+  },
+
+  "split": {
+    "scheme": "expanding_walk_forward",
+    "n_splits": 5,
+    "min_train_frac": 0.4,
+    "purge_rows": 5
+  },
+
+  "missing": {
+    "rule": "drop_rows_with_nan_in_target_or_any_feature",
+    "sample_alignment": "common_index_over_all_features_and_baselines"
+  },
+
+  "models": [
+    {"name": "HAR-3", "features": ["rv_d", "rv_w", "rv_m"], "estimator": "ols"}
+  ],
+
+  "baselines": [
+    {"name": "持续性(周均 RV)", "feature": "rv_w"}
+  ],
+
+  "primary_metric": {
+    "name": "median_skill_across_stocks",
+    "definition": "median over stocks of (1 - MSE_model / MSE_baseline), OOS",
+    "why": "对离群值稳健，回答典型股票是否有效"
+  },
+
+  "secondary_metrics": [
+    "positive_skill_share",
+    "skill_iqr",
+    "spearman_diff_median",
+    "subperiod_median_skill",
+    "regime_bias",
+    "per_stock_table"
+  ],
+
+  "decision_rule": {
+    "support": "M > 0 AND CI_lower > 0 AND positive_share >= 0.70",
+    "partial": "M > 0 AND (CI contains 0 OR positive_share in [0.50, 0.70))",
+    "not_supported": "M <= 0",
+    "no_post_hoc_threshold_changes": true
+  },
+
+  "confidence_intervals": {
+    "across_stocks": {
+      "method": "cluster_bootstrap_over_stocks",
+      "n_resamples": 1000,
+      "quantiles": [0.025, 0.975]
+    },
+    "per_stock": {
+      "method": "moving_block_bootstrap",
+      "block_length_days": 10,
+      "n_resamples": 1000,
+      "quantiles": [0.025, 0.975],
+      "why": "标签为 5 日均值，误差序列自相关，独立重采样会低估方差"
+    }
+  },
+
+  "preregistered_sensitivity": [
+    {"name": "drop_top_overnight_gaps", "rule": "剔除隔夜绝对收益前 1% 的交易日", "reason": "分钟线不复权，疑似除权跳跃"},
+    {"name": "time_halves", "rule": "样本外区间二分，分别计算中位数 Skill"},
+    {"name": "volatility_terciles", "rule": "按真实波动三分位，报告各档偏差"},
+    {"name": "baseline_rv_d", "rule": "以当日 RV 作基线重算 Skill 中位数"}
+  ],
+
+  "outputs": {
+    "dir": "reports/cross_stock",
+    "per_stock_csv": "reports/cross_stock/per_stock.csv",
+    "summary_csv": "reports/cross_stock/summary.csv",
+    "sensitivity_csv": "reports/cross_stock/sensitivity.csv",
+    "preregistration_record": "reports/cross_stock/preregistration.json",
+    "chart_dir": "charts/cross_stock"
+  }
+}
