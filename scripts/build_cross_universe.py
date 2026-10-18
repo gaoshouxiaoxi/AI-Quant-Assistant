@@ -157,7 +157,8 @@ def main() -> int:
     out_path = ROOT / "configs" / "universe_cs300_25.json"
     out_path.write_text(json.dumps(out, ensure_ascii=False, indent=2),
                         encoding="utf-8")
-    pd.DataFrame(excluded).to_csv(OUT_DIR / "universe_exclusions.csv", index=False)
+    pd.DataFrame(excluded, columns=["ticker", "name", "symbol", "reason"]).to_csv(
+        OUT_DIR / "universe_exclusions.csv", index=False)
     print(f"\n名单：{out_path.relative_to(ROOT)}")
     print(f"排除记录：{(OUT_DIR / 'universe_exclusions.csv').relative_to(ROOT)}")
     return 0
