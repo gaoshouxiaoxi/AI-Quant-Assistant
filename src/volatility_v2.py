@@ -141,7 +141,7 @@ def evaluate(data: pd.DataFrame, factory) -> dict:
     y_delta = data["target_log"] - data["baseline_log"]
 
     deltas, trues, bases = [], [], []
-    for tr, te in walk_forward_splits(len(X), N_SPLITS):
+    for tr, te in walk_forward_splits(len(X), N_SPLITS, purge=FORWARD_DAYS):
         pipe = Pipeline([("scaler", StandardScaler()), ("model", factory())])
         pipe.fit(X.iloc[tr], y_delta.iloc[tr])
         deltas.append(pd.Series(pipe.predict(X.iloc[te]), index=X.iloc[te].index))

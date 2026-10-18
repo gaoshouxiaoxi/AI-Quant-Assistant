@@ -45,29 +45,33 @@ def make_pipeline(model) -> Pipeline:
 
 
 def walk_forward_splits(n_samples: int, n_splits: int = N_SPLITS,
-                        min_train_frac: float = 0.4):
-    """生成扩展窗口的 (train_idx, test_idx)。
+                        min_train_frac: float = 0.4, purge: int = 1):
+    """生成扩展窗口的 (train_idx, test_idx)，并在训练集末尾剔除 purge 行。
 
-    第 k 折：训练 [0, boundary)，测试 [boundary, boundary + step)。
+    [审计修复] `features.py` 的标签是 `close.pct_change().shift(-1)`，
+    即索引 t 的标签用到 **t+1 的收盘价**，前视窗口 h=1。
+    按 b 切开后，训练行 t=b-1 的标签用到 close[b]——落在测试区间内。
+    因此必须 purge 至少 1 行。
+
+    调用方应按各自标签的前视窗口传 purge：
+    - `ml_predict.py`（标签 h=1）→ purge=1
+    - `experiment.py`（h 为循环变量）→ purge=horizon
+    - `robustness.py` / `validate_multi.py`（h=10）→ purge=10
+    - `volatility_v2.py`（目标为未来 10 日均值）→ purge=10
     """
-    start = int(n_samples * min_train_frac)
-    remaining = n_samples - start
-    if remaining < n_splits:
-        raise ValueError(f"样本太少：{n_samples} 行，无法切成 {n_splits} 折")
-    step = remaining // n_splits
-    for k in range(n_splits):
-        boundary = start + k * step
-        end = n_samples if k == n_splits - 1 else boundary + step
-        yield np.arange(0, boundary), np.arange(boundary, end)
+    from validation import walk_forward_indices
+
+    yield from walk_forward_indices(n_samples, n_splits, min_train_frac, purge)
 
 
 def evaluate_model(model, X: pd.DataFrame, y: pd.Series,
-                   n_splits: int = N_SPLITS) -> dict:
+                   n_splits: int = N_SPLITS, purge: int = 1) -> dict:
     """前向验证并汇总指标（各折样本外结果的合并）。"""
     proba_all, y_all = [], []
     fold_rows = []
 
-    for train_idx, test_idx in walk_forward_splits(len(X), n_splits):
+    for train_idx, test_idx in walk_forward_splits(len(X), n_splits,
+                                                    purge=purge):
         X_tr, y_tr = X.iloc[train_idx], y.iloc[train_idx]
         X_te, y_te = X.iloc[test_idx], y.iloc[test_idx]
         if y_tr.nunique() < 2 or len(X_te) == 0:

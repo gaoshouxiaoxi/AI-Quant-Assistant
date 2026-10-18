@@ -40,6 +40,9 @@ CHART_DIR = ROOT / "charts"
 DATA_DIR = ROOT / "data"
 REPORT_DIR = ROOT / "reports"
 
+# 标签前视窗口：features.py 用 shift(-1)，即次日收盘价，h=1
+LABEL_HORIZON = 1
+
 DEFAULT_TICKERS = ["AAPL", "600519"]
 DEFAULT_START = "2022-06-15"
 DEFAULT_END = "2024-12-31"
@@ -110,7 +113,7 @@ def main() -> None:
         print("-" * 76)
 
         for name in models:
-            m = evaluate_model(models[name], X, y)
+            m = evaluate_model(models[name], X, y, purge=LABEL_HORIZON)
             print(format_metrics(name, m))
             summary.append({"ticker": ticker, "label": label, "model": name, **m})
 

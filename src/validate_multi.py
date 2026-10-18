@@ -88,7 +88,7 @@ def build_dataset(stock: pd.DataFrame, horizon: int = HORIZON,
 
 def run_folds(X: pd.DataFrame, y: pd.Series):
     rows = []
-    for k, (tr, te) in enumerate(walk_forward_splits(len(X), N_SPLITS), 1):
+    for k, (tr, te) in enumerate(walk_forward_splits(len(X), N_SPLITS, purge=HORIZON), 1):
         X_tr, y_tr = X.iloc[tr], y.iloc[tr]
         X_te, y_te = X.iloc[te], y.iloc[te]
         if y_tr.nunique() < 2 or y_te.nunique() < 2:

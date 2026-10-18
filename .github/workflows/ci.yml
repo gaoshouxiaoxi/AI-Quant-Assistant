@@ -28,9 +28,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # 单元测试只依赖 pandas / numpy / pytest，
+          # 单元测试依赖 pandas / numpy / scikit-learn / pytest，
           # 不装 yfinance、xgboost、streamlit 等重量级包，构建更快更稳
-          pip install pandas numpy pytest
+          pip install pandas numpy scikit-learn pytest
 
       - name: Run unit tests
         run: python -m pytest tests -v

@@ -80,7 +80,7 @@ def build_dataset(stock: pd.DataFrame, horizon: int, threshold: float):
 def fold_aucs(X: pd.DataFrame, y: pd.Series, n_splits: int = 5):
     """逐折计算 AUC，返回明细。"""
     rows = []
-    for k, (tr, te) in enumerate(walk_forward_splits(len(X), n_splits), 1):
+    for k, (tr, te) in enumerate(walk_forward_splits(len(X), n_splits, purge=HORIZON), 1):
         X_tr, y_tr = X.iloc[tr], y.iloc[tr]
         X_te, y_te = X.iloc[te], y.iloc[te]
         if y_tr.nunique() < 2 or y_te.nunique() < 2:

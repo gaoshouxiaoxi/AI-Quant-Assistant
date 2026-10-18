@@ -109,7 +109,7 @@ def main() -> None:
                     n_estimators=250, max_depth=5, min_samples_leaf=25,
                     random_state=42, n_jobs=-1,
                 )
-                m = evaluate_model(model, X, y)
+                m = evaluate_model(model, X, y, purge=horizon)
                 rows.append({
                     "ticker": ticker, "horizon": horizon, "threshold": threshold,
                     "samples": len(X), "up_rate": m["up_rate"],
