@@ -2,7 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, dev]
+    # 所有分支都跑：审计/实验分支同样需要被验证，
+    # 只测 main 会让"还没合并的改动"处于无 CI 状态。
+    branches: ["**"]
   pull_request:
     branches: [main]
 
