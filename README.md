@@ -77,6 +77,25 @@ streamlit run app.py
 | **波动率预测** | 当前 20 日 Yang-Zhang 波动、未来 5 日 HAR 预测（含变化方向）、样本外 R² |
 | **说明与局限** | 能预测什么、不能预测什么，方法论要点与免责声明 |
 
+### 界面截图
+
+以贵州茅台（600519）为例，区间 2022-06-15 ~ 2024-12-31：
+
+**概览**：5 个风险收益指标 + K 线与金叉死叉标记
+
+![概览](docs/screenshots/streamlit-overview.png)
+
+**均线策略**：回测结果一览 + 净值与回撤曲线
+
+![均线策略](docs/screenshots/streamlit-strategy.png)
+
+**波动率预测**：当前波动、未来 5 日预测、样本外 R²、历史波动曲线
+
+![波动率预测](docs/screenshots/streamlit-volatility.png)
+
+> 截图由 `scripts/take_screenshots.py` 自动生成（Playwright 驱动本机已装的 Edge，
+> `channel="msedge"`，无需下载 Chromium）。复现步骤：先起服务，再运行脚本。
+
 几点实现细节：
 
 - 数据优先读本地缓存（`load_daily(..., cache_dir=...)`），避免每次刷新都打网络接口
@@ -614,6 +633,9 @@ AI-Quant-Assistant/
 │   ├── jumps.py          # 跳跃建模（BV 与 MAD 检测 + 尖峰预测）
 │   ├── intraday.py       # 日内效应（15 分钟数据）
 │   └── analyze.py        # 分析主程序
+├── docs/screenshots/     # 界面截图（由 scripts/take_screenshots.py 生成）
+├── scripts/
+│   └── take_screenshots.py   # Playwright + 本机 Edge 截图
 ├── CONTRIBUTING.md
 ├── LICENSE
 ├── README.md
@@ -665,6 +687,9 @@ python -m pytest tests -v
 
 CI（`.github/workflows/ci.yml`）在 Python 3.11 / 3.12 上跑测试 + 全模块语法检查，
 只安装 `pandas numpy pytest`，不拉 yfinance / xgboost / streamlit，构建快且稳定。
+
+**CI 当前状态：✅ 通过**（run #1，commit `3f79f3f`，耗时约 23 秒）。
+后续每次 push 到 `main` / `dev` 或发起 PR 都会自动触发。
 
 ## 贡献
 

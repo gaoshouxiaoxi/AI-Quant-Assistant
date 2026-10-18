@@ -2,3 +2,5 @@
 -r requirements.txt
 
 pytest
+# 截图脚本用（复用本机 Edge，无需下载 Chromium）
+playwright
