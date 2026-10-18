@@ -270,6 +270,13 @@ def plot_study(per_stock: pd.DataFrame, summary: dict, out_dir: Path) -> list[Pa
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
+    # 必须设置中文字体，否则标题与坐标轴会渲染成方框（本次就踩过）
+    try:
+        from charts import setup_chinese_font
+        setup_chinese_font()
+    except Exception:  # noqa: BLE001
+        pass
+
     out_dir.mkdir(parents=True, exist_ok=True)
     paths = []
 
