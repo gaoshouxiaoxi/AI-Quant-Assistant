@@ -1,0 +1,145 @@
+{
+  "protocol_version": "1.0.0",
+  "description": "分层抽样验证：3 板块 x 3 市值层，每格 7 只，共 63 只；检验 HAR-3 误差优势是否受选股范围影响",
+  "preregistration": "docs/preregistration_stratified.md",
+  "parent_experiment": "research/cross-stock-validation",
+  "parent_commit": "482ce64",
+  "supersedes_preregistration": false,
+  "seed": 42,
+
+  "universe_rule": {
+    "pool_indices": {
+      "大市值": "000300",
+      "中市值": "000905",
+      "小市值": "000852"
+    },
+    "pool_source": "akshare index_stock_cons_csindex",
+    "snapshot_date": "2026-10-16",
+    "boards": {
+      "沪市主板": ["600", "601", "603", "605"],
+      "深市主板": ["000", "001", "002", "003", "302"],
+      "创业板": ["300", "301"]
+    },
+    "excluded_boards": {
+      "科创板": {
+        "prefixes": ["688"],
+        "reason": "涨跌幅 20% 与投资者门槛不同，波动结构不可直接比较；留作后续独立研究"
+      }
+    },
+    "quota_per_cell": 7,
+    "n_cells": 9,
+    "target_n": 63,
+    "sampling": "random_permutation_with_fixed_seed",
+    "sampling_order": "每格内先按代码升序，再用 seed=42 随机置换，依序取合格者",
+    "shortfall_rule": "某格不足 7 只则取满，不跨格借调；缺口写入报告",
+    "completeness": {
+      "min_bars": 1900,
+      "first_bar_not_after": "2024-10-10",
+      "last_bar_not_before": "2026-10-09",
+      "median_bars_per_day": 4
+    },
+    "exclusion_reason_policy": "只允许数据完整性原因；禁止因表现排除",
+    "overlap_policy": "允许与前一个 25 只实验重叠，记录清单，不剔除"
+  },
+
+  "data": {
+    "source": "sina_60m_bars",
+    "endpoint": "quotes.sina.cn CN_MarketDataService.getKLineData",
+    "scale_minutes": 60,
+    "datalen": 1970,
+    "adjustment": "none",
+    "trading_days_per_year": 252,
+    "rv_definition": "sum(r_i^2) + overnight^2, 日度方差，未年化",
+    "network_required_for_fetch": true,
+    "network_required_for_analysis": false
+  },
+
+  "target": {
+    "name": "future_mean_rv",
+    "horizon_days": 5,
+    "space": "log",
+    "formula": "log(mean(RV[t+1 : t+5]))"
+  },
+
+  "split": {
+    "scheme": "expanding_walk_forward",
+    "n_splits": 5,
+    "min_train_frac": 0.4,
+    "purge_rows": 5
+  },
+
+  "missing": {
+    "rule": "drop_rows_with_nan_in_target_or_any_feature",
+    "sample_alignment": "common_index_over_all_features_and_baselines"
+  },
+
+  "models": [
+    {"name": "HAR-3", "features": ["rv_d", "rv_w", "rv_m"], "estimator": "ols"}
+  ],
+
+  "baselines": [
+    {"name": "持续性(周均 RV)", "feature": "rv_w"}
+  ],
+
+  "primary_metric": {
+    "name": "median_skill_across_all_stocks",
+    "definition": "全部 63 只的 Skill 中位数，不分子层"
+  },
+
+  "secondary_metrics": [
+    "per_cell_median_skill",
+    "board_median_skill",
+    "size_median_skill",
+    "positive_skill_share",
+    "spearman_diff_median",
+    "disp_ratio",
+    "regime_bias",
+    "time_halves",
+    "overlap_sensitivity"
+  ],
+
+  "decision_rule": {
+    "support": "M > 0 AND CI_lower > 0 AND positive_share >= 0.70",
+    "partial": "M > 0 AND (CI contains 0 OR positive_share in [0.50, 0.70))",
+    "not_supported": "M <= 0"
+  },
+
+  "confidence_intervals": {
+    "across_stocks": {
+      "method": "cluster_bootstrap_over_stocks",
+      "n_resamples": 1000,
+      "quantiles": [0.025, 0.975],
+      "caveat": "只刻画跨股票异质性，不修正共同因子暴露；63 只不是 63 个独立证据"
+    },
+    "per_stock": {
+      "method": "moving_block_bootstrap",
+      "block_length_days": 10,
+      "n_resamples": 1000,
+      "quantiles": [0.025, 0.975]
+    },
+    "stratified_cells": {
+      "method": "descriptive_only",
+      "why": "每格 7 只，功效不足；不做显著性检验，不做 9 次比较"
+    }
+  },
+
+  "preregistered_sensitivity": [
+    {"name": "drop_top_overnight_gaps", "rule": "剔除隔夜绝对收益前 1% 的交易日"},
+    {"name": "time_halves", "rule": "样本外区间二分"},
+    {"name": "volatility_terciles", "rule": "按真实波动三分位"},
+    {"name": "baseline_rv_d", "rule": "以当日 RV 作基线"},
+    {"name": "exclude_overlap_with_25", "rule": "剔除与前一个 25 只实验重叠的股票后重算"}
+  ],
+
+  "outputs": {
+    "dir": "reports/stratified",
+    "per_stock_csv": "reports/stratified/per_stock.csv",
+    "summary_csv": "reports/stratified/summary.csv",
+    "cell_csv": "reports/stratified/cells.csv",
+    "sensitivity_csv": "reports/stratified/sensitivity.csv",
+    "exclusions_csv": "reports/stratified/exclusions.csv",
+    "overlap_csv": "reports/stratified/overlap_with_cross_stock.csv",
+    "preregistration_record": "reports/stratified/preregistration.json",
+    "chart_dir": "charts/stratified"
+  }
+}

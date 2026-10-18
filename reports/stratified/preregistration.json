@@ -1,0 +1,8 @@
+{
+  "recorded_at_utc": "2026-10-18T11:10:27Z",
+  "base_commit": "482ce64c5d71faa20748468758f9e9cbf21f84a0",
+  "config_sha256": "6b13dc1138e04a574bb7fafb53e364657ebbd78be0eb48b313b309e155fbeb73",
+  "preregistration_sha256": "07727be2ec80380f9b9ad44ac4fa27be905bb45cce21b99515ddc5ec773ff1e3",
+  "parent_experiment_preregistration": "079e310",
+  "note": "在抓取任何新行情前生成；分层方案基于可行性表（仅元数据），不含任何实验结果"
+}
