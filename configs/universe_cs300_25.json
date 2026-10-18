@@ -1,0 +1,235 @@
+{
+  "protocol_version": "1.0.0",
+  "snapshot_date": "2026-10-16",
+  "ordering": "ascending stock code (string sort)",
+  "target_n": 25,
+  "selected_n": 25,
+  "universe": [
+    {
+      "ticker": "000001",
+      "name": "平安银行",
+      "symbol": "sz000001",
+      "bars": "data/minute/sz000001_60m.csv",
+      "n_bars": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000002",
+      "name": "万科A",
+      "symbol": "sz000002",
+      "bars": "data/minute/sz000002_60m.csv",
+      "n_bars": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000063",
+      "name": "中兴通讯",
+      "symbol": "sz000063",
+      "bars": "data/minute/sz000063_60m.csv",
+      "n_bars": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000100",
+      "name": "TCL科技",
+      "symbol": "sz000100",
+      "bars": "data/minute/sz000100_60m.csv",
+      "n_bars": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000157",
+      "name": "中联重科",
+      "symbol": "sz000157",
+      "bars": "data/minute/sz000157_60m.csv",
+      "n_bars": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000166",
+      "name": "申万宏源",
+      "symbol": "sz000166",
+      "bars": "data/minute/sz000166_60m.csv",
+      "n_bars": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000301",
+      "name": "东方盛虹",
+      "symbol": "sz000301",
+      "bars": "data/minute/sz000301_60m.csv",
+      "n_bars": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000333",
+      "name": "美的集团",
+      "symbol": "sz000333",
+      "bars": "data/minute/sz000333_60m.csv",
+      "n_bars": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000338",
+      "name": "潍柴动力",
+      "symbol": "sz000338",
+      "bars": "data/minute/sz000338_60m.csv",
+      "n_bars": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000408",
+      "name": "藏格矿业",
+      "symbol": "sz000408",
+      "bars": "data/minute/sz000408_60m.csv",
+      "n_bars": 1970,
+      "start": "2024-09-23 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000425",
+      "name": "徐工机械",
+      "symbol": "sz000425",
+      "bars": "data/minute/sz000425_60m.csv",
+      "n_bars": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000538",
+      "name": "云南白药",
+      "symbol": "sz000538",
+      "bars": "data/minute/sz000538_60m.csv",
+      "n_bars": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000568",
+      "name": "泸州老窖",
+      "symbol": "sz000568",
+      "bars": "data/minute/sz000568_60m.csv",
+      "n_bars": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000596",
+      "name": "古井贡酒",
+      "symbol": "sz000596",
+      "bars": "data/minute/sz000596_60m.csv",
+      "n_bars": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000617",
+      "name": "中油资本",
+      "symbol": "sz000617",
+      "bars": "data/minute/sz000617_60m.csv",
+      "n_bars": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000625",
+      "name": "长安汽车",
+      "symbol": "sz000625",
+      "bars": "data/minute/sz000625_60m.csv",
+      "n_bars": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000630",
+      "name": "铜陵有色",
+      "symbol": "sz000630",
+      "bars": "data/minute/sz000630_60m.csv",
+      "n_bars": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000651",
+      "name": "格力电器",
+      "symbol": "sz000651",
+      "bars": "data/minute/sz000651_60m.csv",
+      "n_bars": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000657",
+      "name": "中钨高新",
+      "symbol": "sz000657",
+      "bars": "data/minute/sz000657_60m.csv",
+      "n_bars": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000708",
+      "name": "中信特钢",
+      "symbol": "sz000708",
+      "bars": "data/minute/sz000708_60m.csv",
+      "n_bars": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000725",
+      "name": "京东方A",
+      "symbol": "sz000725",
+      "bars": "data/minute/sz000725_60m.csv",
+      "n_bars": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000768",
+      "name": "中航西飞",
+      "symbol": "sz000768",
+      "bars": "data/minute/sz000768_60m.csv",
+      "n_bars": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000776",
+      "name": "广发证券",
+      "symbol": "sz000776",
+      "bars": "data/minute/sz000776_60m.csv",
+      "n_bars": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000792",
+      "name": "盐湖股份",
+      "symbol": "sz000792",
+      "bars": "data/minute/sz000792_60m.csv",
+      "n_bars": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000807",
+      "name": "云铝股份",
+      "symbol": "sz000807",
+      "bars": "data/minute/sz000807_60m.csv",
+      "n_bars": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    }
+  ],
+  "excluded": []
+}
