@@ -1,0 +1,2 @@
+n_stocks,n_failures,median_skill_base,median_skill_b1,median_paired_improvement,paired_ci_lo,paired_ci_hi,positive_paired_share,median_mean_delta,median_spearman_base,median_spearman_b1,median_disp_base,median_disp_b1,hv_cutoff,verdict
+63,0,0.16427479944498247,0.1442306600116623,-0.07448938066185629,-0.12363735445076074,0.010942062286921295,0.38095238095238093,0.15795916584249423,0.3636059497843449,0.38872738813075214,0.5158600398757579,0.8332097196519793,0.2596689732226046,无效
