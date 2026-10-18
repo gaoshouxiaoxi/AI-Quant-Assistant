@@ -21,14 +21,33 @@ An AI-powered quantitative analysis platform.
 
 ## 目录
 
+- [复现研究结果](#复现研究结果)
 - [快速开始](#快速开始)
 - [网页界面](#网页界面第-7-周)
 - [示例结果](#示例结果)
 - [核心发现：能预测什么、不能预测什么](#核心发现能预测什么不能预测什么)
+- [方法审计](#方法审计2026-10四项修复与结论复核)
 - [测试](#测试)
 - [项目结构](#项目结构)
 - [贡献](#贡献)
 - [License](#license)
+
+## 复现研究结果
+
+核心结论可以在**干净环境、不联网**的条件下一条命令重算：
+
+```bash
+pip install -r requirements-dev.txt
+python run_experiment.py --check
+```
+
+预期输出：`全部一致（容差 1e-06）—— 复现成功`（约 4 秒）。
+
+主实验只读仓库内**已提交**的 60 分钟 bar（`data/minute/*_60m.csv`，每只 1970 根），
+协议全部外置在 `configs/research_main.json`，元数据（git commit、依赖版本、
+数据文件 sha256、随机种子）写在 `reports/research/manifest.json`。
+
+完整说明见 **[docs/reproduction.md](docs/reproduction.md)**。
 
 ## Tech Stack
 
@@ -843,6 +862,9 @@ for _stream in (sys.stdout, sys.stderr):
 ```
 AI-Quant-Assistant/
 ├── app.py                # Streamlit 网页界面
+├── run_experiment.py     # 统一实验入口（可复现主实验）
+├── configs/
+│   └── research_main.json   # 实验协议（目标/切分/模型/指标）
 ├── charts/               # 图表（入库，供 README 引用）
 ├── data/                 # 日线 CSV（不入库，可重新生成）
 │   └── minute/           # 分钟线（入库，体量小且用于复现）

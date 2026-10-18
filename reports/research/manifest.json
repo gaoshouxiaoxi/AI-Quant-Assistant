@@ -1,0 +1,72 @@
+{
+  "protocol_version": "1.0.0",
+  "generated_at_utc": "2026-10-18T10:53:50+00:00",
+  "runtime_seconds": 3.66,
+  "seed": 42,
+  "git": {
+    "commit": "c0b4ffbe043da96f92617f11dfaea739cfe90fc9",
+    "branch": "main",
+    "dirty": true
+  },
+  "python": "3.11.4",
+  "platform": "Windows-10-10.0.26200-SP0",
+  "packages": {
+    "pandas": "3.0.6",
+    "numpy": "2.4.6",
+    "sklearn": "1.9.1",
+    "scipy": "1.17.1",
+    "matplotlib": "3.11.2"
+  },
+  "config": {
+    "path": "configs\\research_main.json",
+    "sha256": "811b734fc857620e862ca6bf62c0faff5e03e4afd51888a5ad86264001fe378c"
+  },
+  "data": [
+    {
+      "ticker": "600519",
+      "path": "data/minute/sh600519_60m.csv",
+      "sha256": "2104bde1bee38c4c3798c07b0edb0ce00fc79823cee466b9190f95be84d8ecba",
+      "rows": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000858",
+      "path": "data/minute/sz000858_60m.csv",
+      "sha256": "266b7430585238e4e168997077ec4b42fcacbfc2ff4b5464c2d34a233a3ad557",
+      "rows": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    },
+    {
+      "ticker": "000001",
+      "path": "data/minute/sz000001_60m.csv",
+      "sha256": "d74721afe97179704e5dfeec34b27bdc1c7d2df121ef6532fffe683be29752cc",
+      "rows": 1970,
+      "start": "2024-09-30 14:00:00",
+      "end": "2026-10-16 15:00:00"
+    }
+  ],
+  "target": {
+    "name": "future_mean_rv",
+    "horizon_days": 5,
+    "space": "log",
+    "formula": "log(mean(RV[t+1 : t+5]))"
+  },
+  "split": {
+    "scheme": "expanding_walk_forward",
+    "n_splits": 5,
+    "min_train_frac": 0.4,
+    "purge_rows": 5,
+    "purge_reason": "标签前视窗口 = 5 日，训练集末尾必须剔除 5 行"
+  },
+  "missing": {
+    "rule": "drop_rows_with_nan_in_target_or_any_feature",
+    "sample_alignment": "common_index_over_all_features_and_baselines"
+  },
+  "network_required": false,
+  "environment": {
+    "numpy": "2.4.6",
+    "random_seed_applied": 42
+  }
+}
