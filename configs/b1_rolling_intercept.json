@@ -1,0 +1,130 @@
+{
+  "protocol_version": "1.0.0",
+  "description": "B1 滚动截距修正：在 HAR-3 基础上仅用滚动窗口估计的截距修正，检验能否降低预测损失",
+  "preregistration": "docs/preregistration_b1.md",
+  "base_commit": "3f05bda",
+  "modifies_existing_code": false,
+  "seed": 42,
+
+  "correction": {
+    "name": "rolling_intercept",
+    "window": 20,
+    "horizon": 5,
+    "maturity_rule": "trading_day_index(t) - trading_day_index(s) >= 5",
+    "maturity_index_basis": "raw_daily_series_before_feature_nan_filter",
+    "residual_definition": "e_s = y_s - y_hat_s (base prediction, never the corrected one)",
+    "correction_formula": "delta_t = mean(latest 20 matured residuals); y_hat_b1 = y_hat_t + delta_t",
+    "coefficients_frozen_in_test": true,
+    "intercept_only": true
+  },
+
+  "initialization": {
+    "mode": "training_fold_out_of_sample",
+    "why": "训练集内拟合残差会系统性偏小，削弱修正作用",
+    "nested_fit_scheme": "expanding_window",
+    "nested_train_end_rule": "s - horizon (拟合样本标签必须已成熟)",
+    "min_history_train": 60,
+    "init_residuals": "most recent 20 matured OOS residuals from the training interval",
+    "forbid": [
+      "使用训练集内拟合残差",
+      "缩短窗口以凑够数量",
+      "用测试期残差初始化",
+      "跨折传递滚动状态"
+    ]
+  },
+
+  "state_isolation": {
+    "per_fold_refit": true,
+    "clear_state_after_fold": true,
+    "next_fold_rebuild_history": true,
+    "shared_test_index_with_har3": true
+  },
+
+  "failure_rule": {
+    "condition": "matured training residuals < 20 at any outer fold test start",
+    "action": "mark stock as protocol_failure, exclude from primary metric",
+    "log": "reports/b1/failures.csv",
+    "no_workarounds": true
+  },
+
+  "universe": {
+    "source": "configs/universe_stratified_63.json",
+    "n_stocks": 63
+  },
+
+  "target": {
+    "name": "future_mean_rv",
+    "horizon_days": 5,
+    "space": "log"
+  },
+
+  "split": {
+    "scheme": "expanding_walk_forward",
+    "n_splits": 5,
+    "min_train_frac": 0.4,
+    "purge_rows": 5
+  },
+
+  "baseline": {
+    "name": "持续性(周均 RV)",
+    "feature": "rv_w"
+  },
+
+  "primary_metric": {
+    "name": "median_skill_b1_across_stocks",
+    "definition": "median over stocks of 1 - MSE(b1) / MSE(rv_w)",
+    "role": "reporting"
+  },
+
+  "decision_metric": {
+    "name": "median_paired_relative_improvement",
+    "definition": "median over stocks of 1 - MSE(b1) / MSE(har3)",
+    "rule": {
+      "effective": "median > 0 AND ci_lower > 0",
+      "partial": "median > 0 AND ci contains 0",
+      "ineffective": "median <= 0"
+    },
+    "why": "同一基线下的配对比较，直接回答 B1 是否优于 HAR-3"
+  },
+
+  "high_vol_subset": {
+    "definition": "stock-level historical volatility from FIRST fold training window only",
+    "measure": "median annualized volatility of daily RV over the first fold train interval",
+    "split": "cross-sectional median across 63 stocks",
+    "forbid": ["uses test-period data", "redefined after seeing results"],
+    "precomputed_in": "reports/b1/high_vol_groups.csv"
+  },
+
+  "confidence_intervals": {
+    "across_stocks": {
+      "method": "cluster_bootstrap_over_stocks",
+      "n_resamples": 1000,
+      "quantiles": [0.025, 0.975]
+    },
+    "per_stock_paired": {
+      "method": "moving_block_bootstrap",
+      "block_length_days": 10,
+      "n_resamples": 1000,
+      "quantiles": [0.025, 0.975]
+    },
+    "caveat": "不修正股票间共同因子暴露；63 只不是 63 个独立证据"
+  },
+
+  "reporting": {
+    "must_report_negative_results": true,
+    "must_report_protocol_failures": true,
+    "must_report_high_vol_subset_even_if_unfavorable": true,
+    "interpretation_limit": "Skill/Δ 仅反映相对滞后基线的预测损失改善，不代表收益或实盘盈利"
+  },
+
+  "outputs": {
+    "dir": "reports/b1",
+    "per_stock_csv": "reports/b1/per_stock.csv",
+    "summary_csv": "reports/b1/summary.csv",
+    "paired_csv": "reports/b1/paired.csv",
+    "failures_csv": "reports/b1/failures.csv",
+    "high_vol_groups_csv": "reports/b1/high_vol_groups.csv",
+    "preregistration_record": "reports/b1/preregistration.json",
+    "chart_dir": "charts/b1"
+  }
+}

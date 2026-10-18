@@ -1,0 +1,7 @@
+{
+  "recorded_at_utc": "2026-10-18T14:11:00Z",
+  "base_commit": "3f05bda74272bd630e8308b4a4785f67babf2afb",
+  "config_sha256": "e362a1e3a437bac084eeb03aa155a56d22f4196b3cb63df0d267ab323d0227cd",
+  "preregistration_sha256": "81ace8e29a976ba00c564477fa12938837eec8846ce084d68e991163b048b904",
+  "note": "在编写任何 B1 实现代码之前生成；原始 HAR-3 代码与参考结果不修改"
+}
