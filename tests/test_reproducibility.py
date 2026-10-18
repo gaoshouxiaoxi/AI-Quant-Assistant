@@ -152,3 +152,41 @@ def test_compare_detects_drift(tmp_path):
     drifted.loc[0, "skill"] = 0.26
     issues = compare_to_reference(drifted, path)
     assert issues and "skill" in issues[0]
+
+
+def test_robustness_study_structure():
+    """稳健性研究必须产出约定的单元数与列。"""
+    from research_pipeline import run_robustness, summarize_robustness  # noqa: PLC0415
+    cfg = json.loads(CFG_PATH.read_text(encoding="utf-8"))
+    study = run_robustness(cfg)
+
+    n_tickers = len(cfg["universe"])
+    assert len(study) == n_tickers * (1 + 2 + 3 + 3), "单元数应为 3 x 9"
+    for col in ("ticker", "scheme", "group", "n", "skill", "spearman",
+                "spearman_base", "disp_ratio"):
+        assert col in study.columns
+
+    summary = summarize_robustness(study)
+    assert set(summary["切法"]) == {"时间二分", "时间三分", "波动三档"}
+
+
+def test_robustness_reproduces_committed_cells():
+    """重算的稳健性单元必须与已提交的 study_cells.csv 一致。"""
+    from research_pipeline import run_robustness  # noqa: PLC0415
+    cfg = json.loads(CFG_PATH.read_text(encoding="utf-8"))
+    ref_path = ROOT / "reports" / "research" / "study_cells.csv"
+    if not ref_path.exists():
+        pytest.skip("尚未生成稳健性参考结果")
+
+    ref = pd.read_csv(ref_path)
+    new = run_robustness(cfg)
+
+    key = ["ticker", "scheme", "group"]
+    for df in (ref, new):
+        df["ticker"] = df["ticker"].astype(str).str.zfill(6)
+    merged = ref.merge(new, on=key, suffixes=("_ref", "_new"))
+    assert len(merged) == len(ref), "单元集合与参考不一致"
+
+    for col in ("n", "skill", "spearman", "spearman_base", "disp_ratio"):
+        diff = (merged[f"{col}_ref"] - merged[f"{col}_new"]).abs().max()
+        assert diff < 1e-9, f"{col} 与参考结果不一致（最大差异 {diff}）"

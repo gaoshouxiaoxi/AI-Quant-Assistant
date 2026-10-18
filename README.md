@@ -49,6 +49,14 @@ python run_experiment.py --check
 
 完整说明见 **[docs/reproduction.md](docs/reproduction.md)**。
 
+延伸材料：
+
+| 文档 | 内容 |
+| --- | --- |
+| [docs/research_report.md](docs/research_report.md) | 研究报告：问题、协议、主结果、稳健性检验（24 个单元）、负面结果、局限与下一步 |
+| [docs/project-intro.md](docs/project-intro.md) | 项目介绍：30 秒 / 2 分钟口述稿、可深入的技术点、常见追问 |
+| [docs/units-audit.md](docs/units-audit.md) | RV 单位台账（方差 vs 波动率，逐文件） |
+
 ## Tech Stack
 
 - Python（pandas / numpy / scikit-learn / xgboost / matplotlib）

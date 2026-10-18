@@ -31,7 +31,8 @@ for _stream in (sys.stdout, sys.stderr):
         pass
 
 from research_pipeline import (compare_to_reference, load_protocol,  # noqa: E402
-                               plot_summary, run_experiment)
+                               plot_study, plot_summary, run_experiment,
+                               run_robustness, summarize_robustness)
 
 
 def main() -> int:
@@ -43,6 +44,8 @@ def main() -> int:
     ap.add_argument("--tol", type=float, default=1e-6,
                     help="--check 的数值容差（默认 1e-6）")
     ap.add_argument("--no-chart", action="store_true", help="不生成图表")
+    ap.add_argument("--study", action="store_true",
+                    help="额外跑稳健性研究（时间子区间 / 波动档位）")
     args = ap.parse_args()
 
     cfg_path = ROOT / args.config
@@ -100,6 +103,45 @@ def main() -> int:
     print(f"耗时 {manifest['runtime_seconds']} 秒   "
           f"git {manifest['git']['commit'][:7] or 'n/a'}"
           f"{' (dirty)' if manifest['git']['dirty'] else ''}")
+
+    if args.study:
+        print("\n" + "=" * 78)
+        print("稳健性研究：把样本外窗口切开，看结论是否稳定")
+        print("=" * 78)
+        study = run_robustness(cfg)
+        study_path = ref_csv.parent / "study_cells.csv"
+        study.to_csv(study_path, index=False)
+
+        summary = summarize_robustness(study)
+        summary_path = ref_csv.parent / "study_summary.csv"
+        summary.to_csv(summary_path, index=False)
+
+        print(f"\n{'切法':<10}{'单元数':>6}{'Skill>0':>9}{'Spearman>基线':>15}"
+              f"{'平均Skill':>11}{'平均Spearman':>14}{'平均离散度':>11}")
+        print("-" * 78)
+        for _, r in summary.iterrows():
+            print(f"{r['切法']:<10}{int(r['单元数']):>6}{int(r['Skill>0']):>9}"
+                  f"{int(r['Spearman>基线']):>15}"
+                  f"{r['平均 Skill']:>+11.2%}{r['平均 Spearman']:>14.3f}"
+                  f"{r['平均离散度比']:>11.2f}")
+
+        print("\n按波动档位的明细（跨标的平均）：")
+        reg = study[study["scheme"] == "regime"]
+        for g, sub in reg.groupby("group"):
+            print(f"  {g:<6} n≈{int(sub['n'].mean()):>3}  "
+                  f"Skill {sub['skill'].mean():>+7.2%}  "
+                  f"Spearman {sub['spearman'].mean():.3f}"
+                  f"（基线 {sub['spearman_base'].mean():.3f}）  "
+                  f"离散度 {sub['disp_ratio'].mean():.2f}")
+
+        if not args.no_chart:
+            try:
+                paths = plot_study(study, ROOT / cfg["outputs"]["chart_dir"])
+                print(f"\n图表：{[str(p.relative_to(ROOT)) for p in paths]}")
+            except Exception as exc:  # noqa: BLE001
+                print(f"\n图表失败（不影响结果）：{type(exc).__name__}: {exc}")
+        print(f"\n单元明细：{study_path.relative_to(ROOT)}")
+        print(f"汇总：{summary_path.relative_to(ROOT)}")
 
     if args.check:
         print("\n" + "=" * 78)

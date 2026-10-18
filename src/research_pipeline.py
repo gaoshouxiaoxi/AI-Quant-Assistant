@@ -333,3 +333,166 @@ def plot_summary(results: pd.DataFrame, out_dir: Path) -> list[Path]:
     fig.savefig(path, dpi=130)
     plt.close(fig)
     return [path]
+
+
+# ---------------------------------------------------------------- 稳健性研究
+
+STUDY_MODEL = "HAR-3"
+
+
+def _oos_frame(dataset: pd.DataFrame, spec: dict, cfg: dict) -> pd.DataFrame:
+    """取某模型的样本外预测，附上真实值、基线、年化波动。"""
+    from sklearn.pipeline import Pipeline
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.linear_model import LinearRegression
+    from rv_estimators import TRADING_DAYS
+
+    folds = walk_forward_indices(
+        len(dataset), cfg["split"]["n_splits"],
+        cfg["split"]["min_train_frac"], cfg["split"]["purge_rows"])
+    X, y = dataset[spec["features"]], dataset["target"]
+    preds, trues = [], []
+    for tr, te in folds:
+        est = Pipeline([("s", StandardScaler()), ("m", LinearRegression())])
+        est.fit(X.iloc[tr], y.iloc[tr])
+        preds.append(pd.Series(est.predict(X.iloc[te]), index=X.iloc[te].index))
+        trues.append(y.iloc[te])
+
+    pred = pd.concat(preds).sort_index()
+    true = pd.concat(trues).sort_index()
+    df = pd.DataFrame({"pred": pred, "true": true,
+                       "base": dataset.loc[true.index, "rv_w"]})
+    df["actual_vol"] = np.sqrt(np.exp(df["true"]) * TRADING_DAYS)
+    return df
+
+
+def _cell_stats(df: pd.DataFrame) -> dict:
+    if len(df) < 20:
+        return {}
+    mse_m = float(np.mean((df["pred"] - df["true"]) ** 2))
+    mse_b = float(np.mean((df["base"] - df["true"]) ** 2))
+    return {
+        "n": int(len(df)),
+        "skill": float(1 - mse_m / mse_b) if mse_b > 0 else float("nan"),
+        "spearman": float(df["true"].corr(df["pred"], method="spearman")),
+        "spearman_base": float(df["true"].corr(df["base"], method="spearman")),
+        "disp_ratio": float(df["pred"].std() / df["true"].std()),
+        "mean_vol": float(df["actual_vol"].mean()),
+    }
+
+
+def run_robustness(cfg: dict) -> pd.DataFrame:
+    """把样本外区间切开，检查结论在不同子区间/波动档位上是否稳定。
+
+    两种切法：
+    - 时间子区间：把样本外窗口按时间等分成 2 段和 3 段
+    - 波动档位：按真实波动三分位分组
+
+    输出长表，每行是一个 (标的, 切法, 分组) 单元。
+    """
+    rows = []
+    for item in cfg["universe"]:
+        bars = read_bars(ROOT / item["bars"])
+        ds = prepare_dataset(bars, cfg)
+        spec = next(m for m in cfg["models"] if m["name"] == STUDY_MODEL)
+        frame = _oos_frame(ds, spec, cfg)
+
+        def add(scheme: str, group: str, sub: pd.DataFrame) -> None:
+            st = _cell_stats(sub)
+            if st:
+                rows.append({"ticker": item["ticker"], "name": item["name"],
+                             "scheme": scheme, "group": group, **st})
+
+        add("overall", "全区间", frame)
+
+        for k in (2, 3):
+            edges = np.linspace(0, len(frame), k + 1).astype(int)
+            for i in range(k):
+                sub = frame.iloc[edges[i]:edges[i + 1]]
+                label = (f"{sub.index.min().date()} ~ {sub.index.max().date()}"
+                         if len(sub) else f"第{i+1}/{k}段")
+                add(f"time_{k}", label, sub)
+
+        terciles = pd.qcut(frame["actual_vol"], 3,
+                           labels=["低波动", "中波动", "高波动"])
+        for name, sub in frame.groupby(terciles, observed=True):
+            add("regime", str(name), sub)
+
+    return pd.DataFrame(rows)
+
+
+def summarize_robustness(study: pd.DataFrame) -> pd.DataFrame:
+    """把单元结果汇总成"某结论在多少个单元里成立"。"""
+    out = []
+    cells = study[study["scheme"] != "overall"]
+    for scheme, g in cells.groupby("scheme"):
+        out.append({
+            "切法": {"time_2": "时间二分", "time_3": "时间三分",
+                     "regime": "波动三档"}.get(scheme, scheme),
+            "单元数": len(g),
+            "Skill>0": int((g["skill"] > 0).sum()),
+            "Spearman>基线": int((g["spearman"] > g["spearman_base"]).sum()),
+            "平均 Skill": float(g["skill"].mean()),
+            "平均 Spearman": float(g["spearman"].mean()),
+            "平均离散度比": float(g["disp_ratio"].mean()),
+        })
+    return pd.DataFrame(out)
+
+
+def plot_study(study: pd.DataFrame, out_dir: Path) -> list[Path]:
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    sys.path.insert(0, str(ROOT / "src"))
+    try:
+        from charts import setup_chinese_font
+        setup_chinese_font()
+    except Exception:  # noqa: BLE001
+        pass
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    paths = []
+    reg = study[study["scheme"] == "regime"]
+    if len(reg):
+        order = ["低波动", "中波动", "高波动"]
+        agg = reg.groupby("group")[["skill", "spearman", "disp_ratio"]].mean()
+        agg = agg.reindex([o for o in order if o in agg.index])
+        p = out_dir / "study_by_regime.png"
+        fig, ax = plt.subplots(figsize=(9, 4.4))
+        x = np.arange(len(agg))
+        ax.bar(x - 0.2, agg["skill"] * 100, width=0.4, color="#d32f2f",
+               label="Skill（%）")
+        ax.bar(x + 0.2, agg["spearman"], width=0.4, color="#1565c0",
+               label="Spearman")
+        ax.set_xticks(x)
+        ax.set_xticklabels(agg.index)
+        ax.axhline(0, color="gray", linewidth=0.9)
+        ax.set_title("按波动档位：Skill 与 Spearman（跨标的平均）")
+        ax.legend(fontsize=9)
+        ax.grid(axis="y", alpha=0.25)
+        fig.tight_layout()
+        fig.savefig(p, dpi=130)
+        plt.close(fig)
+        paths.append(p)
+
+    t = study[study["scheme"].isin(["time_2", "time_3"])]
+    if len(t):
+        p = out_dir / "study_by_time.png"
+        fig, ax = plt.subplots(figsize=(11, 4.6))
+        labels = [f"{r['name']}\n{r['group']}" for _, r in t.iterrows()]
+        x = np.arange(len(t))
+        ax.bar(x - 0.2, t["skill"] * 100, width=0.4, color="#d32f2f",
+               label="Skill（%）")
+        ax.bar(x + 0.2, t["spearman"], width=0.4, color="#1565c0",
+               label="Spearman")
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=7)
+        ax.axhline(0, color="gray", linewidth=0.9)
+        ax.set_title("按时间子区间：Skill 与 Spearman（每根柱子一个子区间）")
+        ax.legend(fontsize=9)
+        ax.grid(axis="y", alpha=0.25)
+        fig.tight_layout()
+        fig.savefig(p, dpi=130)
+        plt.close(fig)
+        paths.append(p)
+    return paths
